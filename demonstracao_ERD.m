@@ -20,7 +20,7 @@ clc
 
 add_ERP = 0;
 add_NOISE = 1;
-total_trials = 20; % quantidade de repeticoes que serao criadas
+total_trials = 5:1:50; % quantidade de repeticoes que serao criadas
 
 dt = 1/100; % periodo de amostragem em segundos
 ti = dt; % instante inicial da amostragem em segundos
@@ -30,24 +30,32 @@ t0 = ti:dt:tf;
 f1 = 8; 
 f2 = f1; f3 = f1; f4 = f1; f5 = f1;
 
+% Cada loop desse 'for' roda o codigo para diferentes quantidades desejadas
+% de trials, como se rodasse o codigo varias vezes para avaliarmos como a
+% quantidade de trials impacta visualmente o ERD. Ao final, outros graficos
+% sao plotados, todos correspondentes ao ultimo loop apenas.
 for trials = total_trials
 
     eeg = zeros(trials,length(t0));
+    % cada loop desse 'for' gera o sinal de EEG de um trial a partir de cinco fontes corticais
     for i = 1:trials
 
         t = t0+1*rand(1);
         ti_erd = (40+rand(1)*10)/100; % porcentagem do intervalo total em que comeca o ERD
         tf_erd = (80+rand(1)*10)/100;
-        delta_erd = tf_erd-ti_erd;
+        delta_erd = tf_erd-ti_erd; % esse delta refere-se ao intervalo de tempo em que houve ERD
 
         ph1 = [zeros(1,floor(ti_erd*length(t))) 2*pi*rand(1)*ones(1,floor(delta_erd*length(t))) zeros(1,floor((1-tf_erd)*length(t)))];
         ph2 = [zeros(1,floor(ti_erd*length(t))) 2*pi*rand(1)*ones(1,floor(delta_erd*length(t))) zeros(1,floor((1-tf_erd)*length(t)))];
         ph3 = [zeros(1,floor(ti_erd*length(t))) 2*pi*rand(1)*ones(1,floor(delta_erd*length(t))) zeros(1,floor((1-tf_erd)*length(t)))];
         ph4 = [zeros(1,floor(ti_erd*length(t))) 2*pi*rand(1)*ones(1,floor(delta_erd*length(t))) zeros(1,floor((1-tf_erd)*length(t)))];
         ph5 = [zeros(1,floor(ti_erd*length(t))) 2*pi*rand(1)*ones(1,floor(delta_erd*length(t))) zeros(1,floor((1-tf_erd)*length(t)))];
+        %     [fases nulas no 1o trecho do sinal       fases randomicas no trecho do ERD        fases nulas no trecho final do sinal]       
         
         SS = [zeros(1,floor(ti_erd*length(t))) ones(1,floor(delta_erd*length(t))) zeros(1,floor((1-tf_erd)*length(t)))];
+        %                  0                                  1                                   0
 
+        % aqui corrige possiveis diferencas no tamanho dos sinais devido aos arredondamentos
         if length(ph1) < length(t)
             d = length(t) - length(ph1);
             ph1 = [zeros(1,d) ph1]; 
@@ -59,14 +67,17 @@ for trials = total_trials
             SS = [zeros(1,d) SS];
         end
 
+        % aqui cria cinco fontes independentes que, quando somadas, geram um unico sinal de EEG
         S1 = sin(2*pi*f1*t+ph1);
         S2 = sin(2*pi*f2*t+ph2);
         S3 = sin(2*pi*f3*t+ph3);
         S4 = sin(2*pi*f4*t+ph4);
         S5 = sin(2*pi*f5*t+ph5);               
 
+        % soma-se as fontes para gerar o que seria um EEG
         eeg(i,:) = S1+S2+S3+S4+S5;
         
+        % aqui adiciona uma senoide na frequencia analisada como se fosse mais uma fonte independente, porem somente no intervalo em que ha ERD
         if add_ERP ~= 0
             ERP = 4*sin(2*pi*f5*t0); ERP = ERP.*SS;
             eeg(i,:) = eeg(i,:) + ERP;
@@ -74,6 +85,7 @@ for trials = total_trials
 
     end
     
+    % aqui adiciona um ruido branco no sinal inteiro
     if add_NOISE ~= 0
         eeg = eeg+wgn(size(eeg)*[1 0]',size(eeg)*[0 1]',10E-3);
     end    
@@ -120,7 +132,7 @@ end
 
 %%
 
-figure('name','Five different sources')
+figure('name','Five different sources of the last trial')
 ti = round(t(floor(ti_erd*length(t))),2);
 tf = round(t(floor(tf_erd*length(t))),2);
 
